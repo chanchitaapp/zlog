@@ -5,17 +5,23 @@ pub const pkg = std.build.Pkg{
     .path = .{ .source = thisDir() ++ "/src/zlog.zig" },
 };
 
-pub fn build(b: *std.build.Builder) void {
-    // Standard release options allow the person running `zig build` to select
-    // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
-    const mode = b.standardReleaseOptions();
+pub fn build(b: *std.Build) void {
+    const target = b.standardTargetOptions(.{});
 
-    const lib = b.addStaticLibrary("zlog", "src/zlog.zig");
-    lib.setBuildMode(mode);
-    lib.install();
+    const optimize = b.standardOptimizeOption(.{});
 
-    const main_tests = b.addTest("src/zlog.zig");
-    main_tests.setBuildMode(mode);
+    const lib = b.addStaticLibrary(.{
+        .name = "zlog",
+        .root_source_file = b.path("src/zlog.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    b.installArtifact(lib);
+
+    const main_tests = b.addTest(.{
+        .root_source_file = b.path("src/zlog.zig"),
+    });
 
     const test_step = b.step("test", "Run library tests");
     test_step.dependOn(&main_tests.step);
