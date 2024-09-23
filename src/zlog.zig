@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+
 const test_allocator = std.testing.allocator;
 
 // Global logger setup
@@ -115,7 +116,7 @@ pub const LogConfig = struct {
             .buf_size = 1000,
         };
     }
-    /// Test mode where time values are all 0 
+    /// Test mode where time values are all 0
     pub fn testMode() Self {
         return Self{
             .min_log_lvl = LevelType.default,
@@ -160,7 +161,7 @@ pub fn LogManager(
                         .buf = undefined,
                     };
                     // Filter out lower log levels
-                    comptime if (@enumToInt(log_lvl) > @enumToInt(conf.min_log_lvl) or (log_lvl == .off)) {
+                    comptime if (@intFromEnum(log_lvl) > @intFromEnum(conf.min_log_lvl) or (log_lvl == .off)) {
                         return newEvent;
                     };
                     const time_val = getTime();
@@ -169,11 +170,15 @@ pub fn LogManager(
                     const w = newEvent.buf.writer();
                     switch (fmt_mode) {
                         .json => {
+                            // try w.writeAll("{");
+                            // try w.print("\"time\":{}", .{time_val});
+                            // try w.writeAll(
+                            //     ",\"level\":\"" ++ log_lvl.asText() ++ "\"",
+                            // );
+
                             try w.writeAll("{");
                             try w.print("\"time\":{}", .{time_val});
-                            try w.writeAll(
-                                ",\"level\":\"" ++ log_lvl.asText() ++ "\"",
-                            );
+                            try w.print(",\"level\":\"{s}\"", .{log_lvl.asText()});
                         },
                         .pretty => {
                             try w.print(TermColor.gray ++ "{} " ++ TermColor.reset, .{time_val});
@@ -200,7 +205,7 @@ pub fn LogManager(
                 /// NOTE: must use msg, msgf, or send methods to dispatch log
                 pub fn add(self: *Self, key: []const u8, comptime fmt_str: []const u8, comptime no_quotes: bool, args: anytype) !void {
                     // Filter out lower log levels
-                    comptime if (@enumToInt(log_lvl) > @enumToInt(conf.min_log_lvl) or (log_lvl == .off)) {
+                    comptime if (@intFromEnum(log_lvl) > @intFromEnum(conf.min_log_lvl) or (log_lvl == .off)) {
                         return;
                     };
                     const w = self.buf.writer();
@@ -241,7 +246,7 @@ pub fn LogManager(
                 pub fn num(self: *Self, key: []const u8, val: anytype) !void {
                     const valTinfo = @typeInfo(@TypeOf(val));
                     switch (comptime valTinfo) {
-                        .Int, .Float, .ComptimeInt, .ComptimeFloat => try self.add(key, "{d}", true, .{val}),
+                        .Int, .Float, .ComptimeInt, .ComptimeFloat => try self.add(key, "{}", true, .{val}),
                         else => @compileError("Expected int or float value, instead got " ++ @typeName(@TypeOf(val))),
                     }
                 }
@@ -250,7 +255,7 @@ pub fn LogManager(
                 pub fn boolean(self: *Self, key: []const u8, val: anytype) !void {
                     const valTinfo = @typeInfo(@TypeOf(val));
                     switch (comptime valTinfo) {
-                        .Bool => try self.add(key, "{d}", true, .{val}),
+                        .Bool => try self.add(key, "{}", true, .{val}),
                         else => @compileError("Expected bool value, instead got " ++ @typeName(@TypeOf(val))),
                     }
                 }
@@ -258,7 +263,7 @@ pub fn LogManager(
                 /// The event should then be discarded.
                 pub fn send(self: *Self) !void {
                     // Filter out lower log levels
-                    comptime if (@enumToInt(log_lvl) > @enumToInt(conf.min_log_lvl) or (log_lvl == .off)) {
+                    comptime if (@intFromEnum(log_lvl) > @intFromEnum(conf.min_log_lvl) or (log_lvl == .off)) {
                         return;
                     };
                     try self.w.writeAll(self.buf.constSlice());
@@ -277,7 +282,7 @@ pub fn LogManager(
                     try self.str("message", msg_str);
                     try self.send();
                 }
-                /// Send this event to the writer with a message from 
+                /// Send this event to the writer with a message from
                 /// a format string and args struct.
                 /// The event should then be discarded.
                 pub fn msgf(self: *Self, comptime fmt_str: []const u8, args: anytype) !void {
@@ -326,7 +331,7 @@ pub fn LogManager(
                 /// NOTE: must use msg, msgf, or send methods to dispatch log
                 fn addCtx(self: *Self, key: []const u8, comptime fmt_str: []const u8, comptime no_quotes: bool, args: anytype) !void {
                     // Filter out lower log levels
-                    comptime if (@enumToInt(log_lvl) > @enumToInt(conf.min_log_lvl) or (log_lvl == .off)) {
+                    comptime if (@intFromEnum(log_lvl) > @intFromEnum(conf.min_log_lvl) or (log_lvl == .off)) {
                         return;
                     };
                     const w = self.ctx.writer();
@@ -359,7 +364,7 @@ pub fn LogManager(
                 pub fn numCtx(self: *Self, key: []const u8, val: anytype) !void {
                     const valTinfo = @typeInfo(@TypeOf(val));
                     switch (comptime valTinfo) {
-                        .Int, .Float, .ComptimeInt, .ComptimeFloat => try self.addCtx(key, "{d}", true, .{val}),
+                        .Int, .Float, .ComptimeInt, .ComptimeFloat => try self.addCtx(key, "{}", true, .{val}),
                         else => @compileError("Expected int or float value, instead got " ++ @typeName(@TypeOf(val))),
                     }
                 }
@@ -367,7 +372,7 @@ pub fn LogManager(
                 pub fn strCtx(self: *Self, key: []const u8, val: []const u8) !void {
                     try self.addCtx(key, "{s}", false, .{val});
                 }
-                /// Returns an event that at the given log level 
+                /// Returns an event that at the given log level
                 pub fn event(self: *Self, comptime lvl: LevelType) !Event(WriterType, fmt_mode, lvl) {
                     var newEvent = try Event(WriterType, fmt_mode, lvl).new(self.w);
                     try newEvent.buf.writer().writeAll(self.ctx.constSlice());
@@ -376,11 +381,10 @@ pub fn LogManager(
                 /// Log a message at this logger's level
                 pub fn print(self: *Self, msg: []const u8) !void {
                     // Filter out lower log levels
-                    comptime if (@enumToInt(log_lvl) > @enumToInt(conf.min_log_lvl) or (log_lvl == .off)) {
-                        return;
+                    comptime if (@intFromEnum(log_lvl) < @intFromEnum(conf.min_log_lvl) and (log_lvl != .off)) {
+                        var ev = try self.event(log_lvl);
+                        try ev.msg(msg);
                     };
-                    var ev = try self.event(log_lvl);
-                    try ev.msg(msg);
                 }
             };
         }
@@ -478,7 +482,7 @@ test "logger event json num" {
     const conf = comptime LogConfig.testMode();
     const logMan = LogManager(conf);
     var logger = try logMan.Logger(@TypeOf(writer), .json, .debug).new(writer);
-    var i: u8 = 100 / 2;
+    const i: u8 = 100 / 2;
     var ev = try logger.event(.debug);
     try ev.str("Hey", "This is a field");
     try ev.str("Hey2", "This is also a field");
@@ -512,7 +516,7 @@ test "logger event json boolean" {
     const conf = comptime LogConfig.testMode();
     const logMan = LogManager(conf);
     var logger = try logMan.Logger(@TypeOf(writer), .json, .debug).new(writer);
-    var i: u8 = 100 / 2;
+    const i: u8 = 100 / 2;
     var ev = try logger.event(.debug);
     try ev.str("Hey", "This is a field");
     try ev.str("Hey2", "This is also a field");
@@ -555,7 +559,7 @@ test "logger event json boolean, with context" {
     try logger.strCtx("Ctx1", "contextVal");
     try logger.booleanCtx("Ctx2", true);
     try logger.numCtx("Ctx3", 14.3);
-    var i: u8 = 100 / 2;
+    const i: u8 = 100 / 2;
     var ev = try logger.event(.debug);
     try ev.str("Hey", "This is a field");
     try ev.str("Hey2", "This is also a field");
@@ -605,7 +609,7 @@ test "logger event json boolean, with new logger context" {
     try logger2.strCtx("Ctx4", "logger2context");
     // this context should not show up because it's on the original logger, not logger2
     try logger.strCtx("Ctx5", "logger1context");
-    var i: u8 = 100 / 2;
+    const i: u8 = 100 / 2;
     var ev = try logger2.event(.debug);
     try ev.str("Hey", "This is a field");
     try ev.str("Hey2", "This is also a field");
