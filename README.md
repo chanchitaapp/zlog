@@ -1,19 +1,22 @@
 # zlog - Zero-Allocation Logging
+
 A [zerolog](https://github.com/rs/zerolog)-inspired log library for Zig.
 
 ![Pretty Logging Image](prettyLog.png)
 
 ## Features
- - Blazing fast
- - Zero allocations
- - Leveled logging
- - Contextual logging 
- - JSON, Plain, and Pretty logging formats
+
+- Blazing fast
+- Zero allocations
+- Leveled logging
+- Contextual logging
+- JSON, Plain, and Pretty logging formats
 
 ## Getting Started
 
 Copy `zlog` folder to a `libs` subdirectory of the root of your project.
 Then in your `build.zig` add:
+
 ```zig
 const std = @import("std");
 const zlog = @import("libs/zlog/build.zig");
@@ -23,10 +26,13 @@ pub fn build(b: *std.build.Builder) void {
     exe.addPackage(zlog.pkg);
 }
 ```
+
 Now you can import and use `zlog`!
 
 ### Simple Logging Example
+
 For simple logging, import a global logger
+
 ```zig
 const zlog = @import("zlog");
 const log = &zlog.json_logger;
@@ -37,14 +43,17 @@ pub fn main() anyerror!void {
 }
 // Output: {"time":1516134303,"level":"debug","message":"hello world"}
 ```
+
 > **Note:** By default, log writes to StdErr at the log level of `.debug`
-> 
+>
 > The default log level **global filter** depends on the build mode:
+>
 > - .Debug => .debug
 > - .ReleaseSafe => .info
 > - .ReleaseFast, .ReleaseSmall => .warn
 
 ### Contextual Logging
+
 Loggers create events, which do the log writing.
 You can add strongly-typed key:value pairs to an event context.
 Then the `msg`, `msgf`, or `send` method will write the event to the log.
@@ -95,6 +104,7 @@ pub fn main() anyerror!void {
 ### Leveled Logging
 
 zlog allow for logging at the following levels (from highest to lowest):
+
 - panic
 - fatal
 - error
