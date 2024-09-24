@@ -7,8 +7,9 @@ pub const pkg = std.build.Pkg{
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
-
     const optimize = b.standardOptimizeOption(.{});
+
+    _ = b.addModule("zlog", .{ .root_source_file = b.path("src/zlog.zig"), .target = target, .optimize = optimize });
 
     const lib = b.addStaticLibrary(.{
         .name = "zlog",
